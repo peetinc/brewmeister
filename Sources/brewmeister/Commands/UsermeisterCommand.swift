@@ -76,6 +76,14 @@ struct UsermeisterCommand: ParsableCommand {
         Logger.info("")
         Logger.info("To apply changes, the user should run:")
         Logger.info("  source ~/.zshrc")
+        Logger.info("")
+        Logger.info("OPTIONAL - Passwordless sudo for brewmeister:")
+        Logger.info("  ⚠️  AT YOUR OWN RISK - Understand the security implications!")
+        Logger.info("  This allows '\(targetUsername)' to run brewmeister without password prompts.")
+        Logger.info("")
+        Logger.info("  Run this command to enable:")
+        let sudoersOneLiner = "echo \"\(targetUsername) ALL = (ALL) NOPASSWD: /usr/local/bin/brewmeister\" | sudo tee /tmp/sudoers-brewmeister >/dev/null && sudo visudo -c -f /tmp/sudoers-brewmeister && sudo install -o root -g wheel -m 0440 /tmp/sudoers-brewmeister /etc/sudoers.d/\(targetUsername) && sudo rm /tmp/sudoers-brewmeister"
+        Logger.info("  \(sudoersOneLiner)")
     }
 
     /// Get home directory for a user
