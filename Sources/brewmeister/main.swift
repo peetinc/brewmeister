@@ -12,5 +12,18 @@ struct BrewmeisterCommand: ParsableCommand {
     )
 }
 
+// Check if this is a help or version request
+let args = CommandLine.arguments
+let isHelpRequest = args.contains("--help") || args.contains("-h") || args.contains("--version")
+
+// Require root for all operations except help/version
+if !isHelpRequest && getuid() != 0 {
+    fputs("Error: brewmeister requires root privileges\n", stderr)
+    fputs("Run with: sudo brewmeister [command]\n", stderr)
+    fputs("\n", stderr)
+    fputs("For help: brewmeister --help (no sudo required)\n", stderr)
+    exit(1)
+}
+
 // Entry point
 BrewmeisterCommand.main()
