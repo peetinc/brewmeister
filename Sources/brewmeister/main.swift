@@ -5,6 +5,16 @@ struct BrewmeisterCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: Version.bundleName,
         abstract: "Homebrew automation wrapper that enables root-level RMM tools to manage packages via dedicated service account",
+        discussion: """
+            PRIVILEGES:
+              All brewmeister commands require root privileges (sudo).
+              Only --help and --version can be run without sudo.
+
+            USAGE:
+              sudo brewmeister setupmeister      # Install brewmeister
+              sudo brewmeister install <package> # Install packages
+              sudo brewmeister usermeister       # Enable current user
+            """,
         version: Version.version,
         subcommands: [SetupCommand.self, BrewPassthroughCommand.self, BrewCommand.self, HealthCommand.self, UninstallCommand.self, UsermeisterCommand.self],
         defaultSubcommand: BrewCommand.self,
