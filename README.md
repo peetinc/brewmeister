@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Sources/Resources/brewmeister.svg" alt="brewmeister" width="200"/>
+</p>
+
 # brewmeister
 
 Homebrew package manager running as a service account for RMM systems.
