@@ -67,13 +67,13 @@ class ProcessExecutor {
 
             outputGroup.enter()
             outputQueue.async {
-                outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                outputData = (try? outputPipe.fileHandleForReading.readToEnd()) ?? Data()
                 outputGroup.leave()
             }
 
             outputGroup.enter()
             errorQueue.async {
-                errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                errorData = (try? errorPipe.fileHandleForReading.readToEnd()) ?? Data()
                 outputGroup.leave()
             }
 
