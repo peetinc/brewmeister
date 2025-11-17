@@ -1,0 +1,32 @@
+# Project
+/private/
+
+# Swift
+.DS_Store
+.build/
+/.swiftpm/
+/Packages/
+xcuserdata/
+DerivedData/
+*.xcodeproj
+*.xcworkspace
+
+# Build artifacts
+*.swiftmodule
+*.swiftdoc
+*.o
+*.a
+
+# IDE
+.vscode/
+.idea/
+
+# Package manager
+Package.resolved
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Archives
+archive_v1/
