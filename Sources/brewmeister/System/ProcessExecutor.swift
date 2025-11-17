@@ -52,22 +52,42 @@ class ProcessExecutor {
             )
         }
 
-        process.waitUntilExit()
-
-        let duration = Date().timeIntervalSince(startTime)
-        let exitCode = Int(process.terminationStatus)
-
         var stdout = ""
         var stderr = ""
 
+        // Read output asynchronously to prevent deadlock
+        // Reading after waitUntilExit() can cause deadlock if pipe buffer fills
         if captureOutput {
-            if let outputData = try? outputPipe.fileHandleForReading.readToEnd() {
-                stdout = String(data: outputData, encoding: .utf8) ?? ""
+            var outputData = Data()
+            var errorData = Data()
+
+            let outputQueue = DispatchQueue(label: "brewmeister.stdout")
+            let errorQueue = DispatchQueue(label: "brewmeister.stderr")
+            let outputGroup = DispatchGroup()
+
+            outputGroup.enter()
+            outputQueue.async {
+                outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                outputGroup.leave()
             }
-            if let errorData = try? errorPipe.fileHandleForReading.readToEnd() {
-                stderr = String(data: errorData, encoding: .utf8) ?? ""
+
+            outputGroup.enter()
+            errorQueue.async {
+                errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                outputGroup.leave()
             }
+
+            process.waitUntilExit()
+            outputGroup.wait()
+
+            stdout = String(data: outputData, encoding: .utf8) ?? ""
+            stderr = String(data: errorData, encoding: .utf8) ?? ""
+        } else {
+            process.waitUntilExit()
         }
+
+        let duration = Date().timeIntervalSince(startTime)
+        let exitCode = Int(process.terminationStatus)
 
         return ExecutionResult(
             exitCode: exitCode,
