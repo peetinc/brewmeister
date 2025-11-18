@@ -299,7 +299,7 @@ if [ "$SKIP_BUILD" = "no" ]; then
         UNIVERSAL_OUTPUT=".build/universal"
 
         # Create universal output directory
-        mkdir -p "$UNIVERSAL_OUTPUT"
+        sudo -u $SUDO_USER mkdir -p "$UNIVERSAL_OUTPUT"
 
         # Build ARM64 (targeting macOS 11.0)
         echo "  Building ARM64 binary (macOS 11.0+)..."
@@ -325,7 +325,7 @@ if [ "$SKIP_BUILD" = "no" ]; then
 
         # Create universal binary with lipo
         echo "  Creating universal binary with lipo..."
-        lipo -create \
+        sudo -u $SUDO_USER lipo -create \
             "$ARM64_OUTPUT/brewmeister" \
             "$X86_64_OUTPUT/brewmeister" \
             -output "$UNIVERSAL_OUTPUT/brewmeister-universal-64"
@@ -333,13 +333,13 @@ if [ "$SKIP_BUILD" = "no" ]; then
 
         # Verify the universal binary
         echo "  Verifying architectures:"
-        lipo -info "$UNIVERSAL_OUTPUT/brewmeister-universal-64" | sed 's/^/    /'
+        sudo -u $SUDO_USER lipo -info "$UNIVERSAL_OUTPUT/brewmeister-universal-64" | sed 's/^/    /'
 
         # Show file sizes
         echo "  Binary sizes:"
-        ls -lh "$ARM64_OUTPUT/brewmeister" | awk '{print "    ARM64:     " $5}'
-        ls -lh "$X86_64_OUTPUT/brewmeister" | awk '{print "    x86_64:    " $5}'
-        ls -lh "$UNIVERSAL_OUTPUT/brewmeister-universal-64" | awk '{print "    Universal: " $5}'
+        sudo -u $SUDO_USER ls -lh "$ARM64_OUTPUT/brewmeister" | awk '{print "    ARM64:     " $5}'
+        sudo -u $SUDO_USER ls -lh "$X86_64_OUTPUT/brewmeister" | awk '{print "    x86_64:    " $5}'
+        sudo -u $SUDO_USER ls -lh "$UNIVERSAL_OUTPUT/brewmeister-universal-64" | awk '{print "    Universal: " $5}'
     else
         # Build single architecture
         echo "  Building $ARCH binary..."
@@ -353,7 +353,7 @@ if [ "$SKIP_BUILD" = "no" ]; then
         # Show file size
         if [ -f "$BINARY_PATH" ]; then
             echo "  Binary size:"
-            ls -lh "$BINARY_PATH" | awk '{print "    " $5}'
+            sudo -u $SUDO_USER ls -lh "$BINARY_PATH" | awk '{print "    " $5}'
         fi
     fi
 
@@ -425,40 +425,36 @@ if [ "$SKIP_NOTARY" = "no" ]; then
         echo "Creating versioned zip files..."
 
         # Get version from Info.plist
-        VERSION=$(defaults read "$REPO_DIR/Sources/Resources/Info.plist" CFBundleShortVersionString 2>/dev/null || echo "2.0.0")
+        VERSION=$(sudo -u $SUDO_USER defaults read "$REPO_DIR/Sources/Resources/Info.plist" CFBundleShortVersionString 2>/dev/null || echo "2.0.0")
 
         # Extract individual architectures from universal binary
         DIST_DIR=".build/dist"
-        mkdir -p "$DIST_DIR"
+        sudo -u $SUDO_USER mkdir -p "$DIST_DIR"
 
         echo "  Extracting architecture slices..."
 
         # Extract ARM64 slice
-        lipo "$BINARY_PATH" -thin arm64 -output "$DIST_DIR/brewmeister-arm-64"
-        chmod 755 "$DIST_DIR/brewmeister-arm-64"
+        sudo -u $SUDO_USER lipo "$BINARY_PATH" -thin arm64 -output "$DIST_DIR/brewmeister-arm-64"
+        sudo -u $SUDO_USER chmod 755 "$DIST_DIR/brewmeister-arm-64"
 
         # Extract x86_64 slice
-        lipo "$BINARY_PATH" -thin x86_64 -output "$DIST_DIR/brewmeister-x86-64"
-        chmod 755 "$DIST_DIR/brewmeister-x86-64"
+        sudo -u $SUDO_USER lipo "$BINARY_PATH" -thin x86_64 -output "$DIST_DIR/brewmeister-x86-64"
+        sudo -u $SUDO_USER chmod 755 "$DIST_DIR/brewmeister-x86-64"
 
         # Copy universal binary
-        cp "$BINARY_PATH" "$DIST_DIR/brewmeister-universal-64"
-        chmod 755 "$DIST_DIR/brewmeister-universal-64"
+        sudo -u $SUDO_USER cp "$BINARY_PATH" "$DIST_DIR/brewmeister-universal-64"
+        sudo -u $SUDO_USER chmod 755 "$DIST_DIR/brewmeister-universal-64"
 
         echo "  ✓ Architecture slices extracted"
 
         # Create zip files with version numbers
         echo "  Creating zip files..."
-        cd "$DIST_DIR"
-
-        zip -q "brewmeister-arm-64-${VERSION}.zip" brewmeister-arm-64
-        zip -q "brewmeister-x86-64-${VERSION}.zip" brewmeister-x86-64
-        zip -q "brewmeister-universal-64-${VERSION}.zip" brewmeister-universal-64
-
-        cd "$REPO_DIR"
+        (cd "$DIST_DIR" && sudo -u $SUDO_USER zip -q "brewmeister-arm-64-${VERSION}.zip" brewmeister-arm-64)
+        (cd "$DIST_DIR" && sudo -u $SUDO_USER zip -q "brewmeister-x86-64-${VERSION}.zip" brewmeister-x86-64)
+        (cd "$DIST_DIR" && sudo -u $SUDO_USER zip -q "brewmeister-universal-64-${VERSION}.zip" brewmeister-universal-64)
 
         echo "  ✓ Zip files created in $DIST_DIR:"
-        ls -lh "$DIST_DIR"/*.zip | awk '{print "    " $9 "  (" $5 ")"}'
+        sudo -u $SUDO_USER ls -lh "$DIST_DIR"/*.zip | awk '{print "    " $9 "  (" $5 ")"}'
         echo ""
     fi
 else
@@ -513,7 +509,7 @@ echo "Binary available at: $BINARY_PATH"
 if [ "$ARCH" = "universal" ] && [ "$SKIP_NOTARY" = "no" ] && [ -d ".build/dist" ]; then
     echo ""
     echo "Release zip files:"
-    ls -1 .build/dist/*.zip 2>/dev/null | while read zipfile; do
+    sudo -u $SUDO_USER ls -1 .build/dist/*.zip 2>/dev/null | while read zipfile; do
         echo "  $(basename "$zipfile")"
     done
 fi
@@ -542,7 +538,7 @@ if read -t 15 -n 1 -s key; then
         OUTPUT_DIR="$(cd "$(dirname "$BINARY_PATH")" && pwd)"
         echo ""
         echo "Opening $OUTPUT_DIR..."
-        open "$OUTPUT_DIR"
+        sudo -u $SUDO_USER open "$OUTPUT_DIR"
     fi
 else
     # Timeout occurred (15 seconds elapsed with no input)
