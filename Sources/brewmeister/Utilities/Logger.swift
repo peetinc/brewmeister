@@ -11,7 +11,7 @@ class Logger {
 
     /// Initialize the logger
     private init() {
-        self.logger = Logging.Logger(label: "com.brewmeister")
+        self.logger = Logging.Logger(label: "com.peetinc.brewmeister")
 
         // Configure log level from environment or default to info
         if let logLevel = ProcessInfo.processInfo.environment["BREWMEISTER_LOG_LEVEL"] {
