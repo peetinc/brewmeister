@@ -323,11 +323,6 @@ if [ "$SKIP_BUILD" = "no" ]; then
         fi
         echo "  ✓ x86_64 build complete"
 
-        # Remove adhoc signatures before lipo (required for Swift binaries)
-        echo "  Removing adhoc signatures..."
-        codesign --remove-signature "$ARM64_OUTPUT/brewmeister" 2>/dev/null || true
-        codesign --remove-signature "$X86_64_OUTPUT/brewmeister" 2>/dev/null || true
-
         # Create universal binary with lipo
         echo "  Creating universal binary with lipo..."
         lipo -create \
