@@ -412,6 +412,51 @@ if [ "$SKIP_NOTARY" = "no" ]; then
     echo "[$(date '+%H:%M:%S')] Notarization complete"
     echo "✓ Notarization complete"
     echo ""
+
+    #==============================================================================
+    # CREATE VERSIONED ZIP FILES (only for universal builds after notarization)
+    #==============================================================================
+
+    if [ "$ARCH" = "universal" ]; then
+        echo "Creating versioned zip files..."
+
+        # Get version from Info.plist
+        VERSION=$(defaults read "$REPO_DIR/Sources/Resources/Info.plist" CFBundleShortVersionString 2>/dev/null || echo "2.0.0")
+
+        # Extract individual architectures from universal binary
+        DIST_DIR=".build/dist"
+        mkdir -p "$DIST_DIR"
+
+        echo "  Extracting architecture slices..."
+
+        # Extract ARM64 slice
+        lipo "$BINARY_PATH" -thin arm64 -output "$DIST_DIR/brewmeister-arm-64"
+        chmod 755 "$DIST_DIR/brewmeister-arm-64"
+
+        # Extract x86_64 slice
+        lipo "$BINARY_PATH" -thin x86_64 -output "$DIST_DIR/brewmeister-x86-64"
+        chmod 755 "$DIST_DIR/brewmeister-x86-64"
+
+        # Copy universal binary
+        cp "$BINARY_PATH" "$DIST_DIR/brewmeister-universal-64"
+        chmod 755 "$DIST_DIR/brewmeister-universal-64"
+
+        echo "  ✓ Architecture slices extracted"
+
+        # Create zip files with version numbers
+        echo "  Creating zip files..."
+        cd "$DIST_DIR"
+
+        zip -q "brewmeister-arm-64-${VERSION}.zip" brewmeister-arm-64
+        zip -q "brewmeister-x86-64-${VERSION}.zip" brewmeister-x86-64
+        zip -q "brewmeister-universal-64-${VERSION}.zip" brewmeister-universal-64
+
+        cd "$REPO_DIR"
+
+        echo "  ✓ Zip files created in $DIST_DIR:"
+        ls -lh "$DIST_DIR"/*.zip | awk '{print "    " $9 "  (" $5 ")"}'
+        echo ""
+    fi
 else
     echo "[3/4] Notarization - SKIPPED"
     echo ""
@@ -459,6 +504,15 @@ fi
 
 echo ""
 echo "Binary available at: $BINARY_PATH"
+
+# Show zip files if created
+if [ "$ARCH" = "universal" ] && [ "$SKIP_NOTARY" = "no" ] && [ -d ".build/dist" ]; then
+    echo ""
+    echo "Release zip files:"
+    ls -1 .build/dist/*.zip 2>/dev/null | while read zipfile; do
+        echo "  $(basename "$zipfile")"
+    done
+fi
 
 if [ "$BM_EXEC" = "no" ]; then
     echo ""
