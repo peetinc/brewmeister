@@ -9,6 +9,9 @@ class Logger {
     /// The underlying logger
     private var logger: Logging.Logger
 
+    /// Silent mode - suppress all output
+    static var isSilent = false
+
     /// Initialize the logger
     private init() {
         self.logger = Logging.Logger(label: "com.peetinc.brewmeister")
@@ -34,6 +37,7 @@ class Logger {
 
     /// Log a debug message
     static func debug(_ message: String, metadata: [String: String]? = nil) {
+        guard !isSilent else { return }
         var loggerMetadata: Logging.Logger.Metadata?
         if let metadata = metadata {
             loggerMetadata = metadata.mapValues { .string($0) }
@@ -43,6 +47,7 @@ class Logger {
 
     /// Log an info message
     static func info(_ message: String, metadata: [String: String]? = nil) {
+        guard !isSilent else { return }
         var loggerMetadata: Logging.Logger.Metadata?
         if let metadata = metadata {
             loggerMetadata = metadata.mapValues { .string($0) }
@@ -52,6 +57,7 @@ class Logger {
 
     /// Log a warning message
     static func warning(_ message: String, metadata: [String: String]? = nil) {
+        guard !isSilent else { return }
         var loggerMetadata: Logging.Logger.Metadata?
         if let metadata = metadata {
             loggerMetadata = metadata.mapValues { .string($0) }
@@ -61,6 +67,7 @@ class Logger {
 
     /// Log an error message
     static func error(_ message: String, metadata: [String: String]? = nil) {
+        guard !isSilent else { return }
         var loggerMetadata: Logging.Logger.Metadata?
         if let metadata = metadata {
             loggerMetadata = metadata.mapValues { .string($0) }
@@ -70,6 +77,7 @@ class Logger {
 
     /// Log a critical error message
     static func critical(_ message: String, metadata: [String: String]? = nil) {
+        guard !isSilent else { return }
         var loggerMetadata: Logging.Logger.Metadata?
         if let metadata = metadata {
             loggerMetadata = metadata.mapValues { .string($0) }
