@@ -285,6 +285,10 @@ if [ "$SKIP_BUILD" = "no" ]; then
     echo "  Updating build version..."
     sudo -u $SUDO_USER ./Scripts/update-build-version.sh
 
+    # Clean build to ensure Info.plist changes are picked up
+    echo "  Cleaning build cache..."
+    sudo -u $SUDO_USER swift package clean
+
     # Run build as the actual user (not root)
     if [ "$ARCH" = "universal" ]; then
         echo "  Building for multiple architectures..."
