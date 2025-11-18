@@ -234,7 +234,7 @@ elif [ "$ARCH" = "x86_64" ]; then
     BINARY_PATH=".build/x86_64-apple-macosx/$BUILD_CONFIG/brewmeister"
     ARCH_DESC="Intel x86_64"
 elif [ "$ARCH" = "universal" ]; then
-    BINARY_PATH=".build/universal/brewmeister"
+    BINARY_PATH=".build/universal/brewmeister-universal-64"
     ARCH_DESC="Universal (ARM64 + Intel)"
 fi
 
@@ -324,18 +324,18 @@ if [ "$SKIP_BUILD" = "no" ]; then
         lipo -create \
             "$ARM64_OUTPUT/brewmeister" \
             "$X86_64_OUTPUT/brewmeister" \
-            -output "$UNIVERSAL_OUTPUT/brewmeister"
+            -output "$UNIVERSAL_OUTPUT/brewmeister-universal-64"
         echo "  ✓ Universal binary created"
 
         # Verify the universal binary
         echo "  Verifying architectures:"
-        lipo -info "$UNIVERSAL_OUTPUT/brewmeister" | sed 's/^/    /'
+        lipo -info "$UNIVERSAL_OUTPUT/brewmeister-universal-64" | sed 's/^/    /'
 
         # Show file sizes
         echo "  Binary sizes:"
         ls -lh "$ARM64_OUTPUT/brewmeister" | awk '{print "    ARM64:     " $5}'
         ls -lh "$X86_64_OUTPUT/brewmeister" | awk '{print "    x86_64:    " $5}'
-        ls -lh "$UNIVERSAL_OUTPUT/brewmeister" | awk '{print "    Universal: " $5}'
+        ls -lh "$UNIVERSAL_OUTPUT/brewmeister-universal-64" | awk '{print "    Universal: " $5}'
     else
         # Build single architecture
         echo "  Building $ARCH binary..."
