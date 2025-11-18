@@ -17,7 +17,20 @@ struct UninstallCommand: ParsableCommand {
     @Flag(name: .long, help: "Proceed with uninstall without confirmation")
     var force: Bool = false
 
+    @Flag(name: .long, help: "Only show errors")
+    var quiet: Bool = false
+
+    @Flag(name: .long, help: "No output at all")
+    var silent: Bool = false
+
     func run() throws {
+        // Configure logging based on flags
+        if silent {
+            Logger.isSilent = true
+        } else if quiet {
+            Logger.setLogLevel(.error)
+        }
+
         Logger.info("Brewmeister removemeister")
 
         // Check privileges

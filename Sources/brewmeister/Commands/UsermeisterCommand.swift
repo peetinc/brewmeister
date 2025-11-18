@@ -17,9 +17,19 @@ struct UsermeisterCommand: ParsableCommand {
     @Flag(name: .long, help: "Force reconfiguration even if already configured")
     var force: Bool = false
 
+    @Flag(name: .long, help: "Only show errors")
+    var quiet: Bool = false
+
+    @Flag(name: .long, help: "No output at all")
+    var silent: Bool = false
+
     func run() throws {
-        // Enable debug logging if verbose
-        if verbose {
+        // Configure logging based on flags
+        if silent {
+            Logger.isSilent = true
+        } else if quiet {
+            Logger.setLogLevel(.error)
+        } else if verbose {
             Logger.setLogLevel(.debug)
         }
 
