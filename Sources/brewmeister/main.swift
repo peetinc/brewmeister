@@ -10,15 +10,22 @@ struct BrewmeisterCommand: ParsableCommand {
               All brewmeister commands require root privileges (sudo).
               Only --help and --version can be run without sudo.
 
-            OUTPUT CONTROL (for *meister commands only):
-              --quiet   Only show errors
-              --silent  No output at all
+            OUTPUT CONTROL:
+              The following flags are available for *meister commands only:
+              (setupmeister, healthmeister, removemeister, usermeister)
+
+              --quiet   Only show errors (suppress info/warning messages)
+              --silent  Suppress all output (including errors)
+
+              Note: These flags do NOT apply to brew passthrough commands.
+                    Homebrew output is always shown for package operations.
 
             USAGE:
               sudo brewmeister setupmeister           # Install brewmeister
-              sudo brewmeister install <package>      # Install packages
+              sudo brewmeister install <package>      # Install packages (shows Homebrew output)
               sudo brewmeister usermeister            # Enable current user
-              sudo brewmeister setupmeister --quiet   # Quiet mode
+              sudo brewmeister setupmeister --quiet   # Quiet install
+              sudo brewmeister healthmeister --silent # Silent health check
             """,
         version: Version.version,
         subcommands: [SetupCommand.self, BrewPassthroughCommand.self, BrewCommand.self, HealthCommand.self, UninstallCommand.self, UsermeisterCommand.self],
