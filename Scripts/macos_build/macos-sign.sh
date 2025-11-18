@@ -195,18 +195,13 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 
     # Get the repository root directory
     SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    REPO_DIR="$( cd "$SCRIPT_DIR/../../.." && pwd )"
+    REPO_DIR="$( cd "$SCRIPT_DIR/../.." && pwd )"
 
     # Build output directories
-    OUTPUT_DIR="$REPO_DIR/build/output"
-    DEBUG_DIR="$OUTPUT_DIR/DEBUG"
+    OUTPUT_DIR="$REPO_DIR/.build/universal"
 
     # Binary names
-    RELEASE_BINARY="meshagent_osx-universal-64"
-    DEBUG_BINARY="DEBUG_meshagent_osx-universal-64"
-
-    # Check if DEBUG binaries should be signed
-    SIGN_DEBUG="${DEBUG:-no}"
+    RELEASE_BINARY="brewmeister-universal-64"
 
     # Custom binary path (if provided)
     CUSTOM_BINARY=""
@@ -224,17 +219,15 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
                 echo ""
                 echo "Arguments:"
                 echo "  BINARY_PATH   Path to a universal binary to sign (optional)"
-                echo "                If not provided, signs binaries in build/output/"
+                echo "                If not provided, signs brewmeister-universal-64 in .build/universal/"
                 echo ""
                 echo "Environment Variables:"
                 echo "  MACOS_SIGN_CERT   Code signing certificate (required)"
-                echo "  DEBUG=yes         Also sign DEBUG binaries (ignored with BINARY_PATH)"
                 echo ""
                 echo "Examples:"
                 echo "  export MACOS_SIGN_CERT=\"Developer ID Application: Your Name (TEAMID)\""
-                echo "  ./macos-sign.sh                              # Sign default binaries"
-                echo "  ./macos-sign.sh /path/to/meshagent_universal # Sign specific binary"
-                echo "  DEBUG=yes ./macos-sign.sh                    # Sign release + DEBUG"
+                echo "  ./macos-sign.sh                                    # Sign default binary"
+                echo "  ./macos-sign.sh /path/to/brewmeister-universal-64  # Sign specific binary"
                 echo ""
                 echo "As a sourceable script:"
                 echo "  source ./macos-sign.sh"
@@ -303,19 +296,13 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 
         echo -e "${YELLOW}Target binary:${NC} $CUSTOM_BINARY"
         echo -e "${YELLOW}Mode:${NC}          Custom binary"
-
-        # Warn if DEBUG is set (it's ignored in custom mode)
-        if [ "$SIGN_DEBUG" = "yes" ]; then
-            echo -e "${YELLOW}Note: DEBUG flag is ignored when signing a custom binary${NC}"
-        fi
     else
-        echo -e "${YELLOW}Sign DEBUG:${NC}    $SIGN_DEBUG"
-        echo -e "${YELLOW}Mode:${NC}          Default (build/output/)"
+        echo -e "${YELLOW}Mode:${NC}          Default (.build/universal/)"
 
         # Check if output directory exists (only needed for default mode)
         if [ ! -d "$OUTPUT_DIR" ]; then
             echo -e "${RED}Error: $OUTPUT_DIR directory not found${NC}"
-            echo "Build binaries first with: make macos ARCHID=10005"
+            echo "Build binaries first with: swift build --disable-sandbox -c release"
             exit 1
         fi
     fi
@@ -343,10 +330,10 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         fi
     else
         #==========================================================================
-        # DEFAULT MODE: SIGN RELEASE BINARY
+        # DEFAULT MODE: SIGN brewmeister BINARY
         #==========================================================================
 
-        echo -e "${BLUE}Step 1: Sign release universal binary${NC}"
+        echo -e "${BLUE}Signing brewmeister universal binary${NC}"
         echo ""
 
         RELEASE_PATH="$OUTPUT_DIR/$RELEASE_BINARY"
@@ -358,32 +345,9 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
                 fi
             fi
         else
-            echo -e "${RED}Error: Release binary not found: $RELEASE_PATH${NC}"
-            echo "Build the universal binary first with: make macos ARCHID=10005"
+            echo -e "${RED}Error: Binary not found: $RELEASE_PATH${NC}"
+            echo "Build the universal binary first with: swift build --disable-sandbox -c release"
             exit 1
-        fi
-
-        #==========================================================================
-        # DEFAULT MODE: SIGN DEBUG BINARY (if DEBUG=yes)
-        #==========================================================================
-
-        if [ "$SIGN_DEBUG" = "yes" ]; then
-            echo -e "${BLUE}Step 2: Sign DEBUG universal binary${NC}"
-            echo ""
-
-            DEBUG_PATH="$DEBUG_DIR/$DEBUG_BINARY"
-
-            if [ -f "$DEBUG_PATH" ]; then
-                if macos_sign_universal_binary "$DEBUG_PATH"; then
-                    if macos_sign_extract_architectures "$DEBUG_PATH"; then
-                        SIGNED_COUNT=$((SIGNED_COUNT + 1))
-                    fi
-                fi
-            else
-                echo -e "${YELLOW}Warning: DEBUG binary not found: $DEBUG_PATH${NC}"
-                echo "  (This is normal if you haven't built DEBUG binaries)"
-                echo ""
-            fi
         fi
     fi
 
@@ -412,18 +376,9 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         echo "  - ${custom_dir}/${base_name}-x86-64 (x86_64)"
     else
         echo "Binary locations:"
-        if [ -f "$RELEASE_PATH" ]; then
-            echo "  Release:"
-            echo "    - $RELEASE_PATH (universal)"
-            echo "    - ${RELEASE_PATH/-universal-64/-arm-64} (arm64)"
-            echo "    - ${RELEASE_PATH/-universal-64/-x86-64} (x86_64)"
-        fi
-        if [ "$SIGN_DEBUG" = "yes" ] && [ -f "$DEBUG_PATH" ]; then
-            echo "  DEBUG:"
-            echo "    - $DEBUG_PATH (universal)"
-            echo "    - ${DEBUG_PATH/-universal-64/-arm-64} (arm64)"
-            echo "    - ${DEBUG_PATH/-universal-64/-x86-64} (x86_64)"
-        fi
+        echo "  - $RELEASE_PATH (universal)"
+        echo "  - ${RELEASE_PATH/-universal-64/-arm-64} (arm64)"
+        echo "  - ${RELEASE_PATH/-universal-64/-x86-64} (x86_64)"
     fi
 
     echo ""
