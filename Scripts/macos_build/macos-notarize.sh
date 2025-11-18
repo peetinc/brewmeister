@@ -10,8 +10,7 @@
 #   macos_notarize_extract_architectures <binary_path> - Extract arch slices
 #
 # Environment Variables:
-#   MACOS_NOTARY_PROFILE - Keychain profile name (default: meshagent-notary)
-#   DEBUG=yes - Also notarize DEBUG binaries in default mode
+#   MACOS_NOTARY_PROFILE - Keychain profile name (default: brewmeister-notary)
 
 #==============================================================================
 # HELPER FUNCTIONS (available when sourced)
@@ -93,7 +92,7 @@ macos_notarize_binary() {
     local NC='\033[0m'
 
     # Keychain profile
-    local KEYCHAIN_PROFILE="${MACOS_NOTARY_PROFILE:-meshagent-notary}"
+    local KEYCHAIN_PROFILE="${MACOS_NOTARY_PROFILE:-brewmeister-notary}"
 
     # Validate binary exists
     if [ ! -f "$binary_path" ]; then
@@ -209,21 +208,16 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 
     # Get script directory and repository root
     SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    REPO_DIR="$( cd "$SCRIPT_DIR/../../.." && pwd )"
+    REPO_DIR="$( cd "$SCRIPT_DIR/../.." && pwd )"
 
     # Build output directories
-    OUTPUT_DIR="$REPO_DIR/build/output"
-    DEBUG_DIR="$OUTPUT_DIR/DEBUG"
+    OUTPUT_DIR="$REPO_DIR/.build/universal"
 
     # Binary names
-    RELEASE_BINARY="meshagent_osx-universal-64"
-    DEBUG_BINARY="DEBUG_meshagent_osx-universal-64"
+    RELEASE_BINARY="brewmeister-universal-64"
 
     # Keychain profile name
-    KEYCHAIN_PROFILE="${MACOS_NOTARY_PROFILE:-meshagent-notary}"
-
-    # Check if DEBUG binaries should be notarized
-    NOTARIZE_DEBUG="${DEBUG:-no}"
+    KEYCHAIN_PROFILE="${MACOS_NOTARY_PROFILE:-brewmeister-notary}"
 
     # Custom binary path (if provided)
     CUSTOM_BINARY=""
@@ -248,15 +242,14 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
                 echo ""
                 echo "Arguments:"
                 echo "  BINARY_PATH   Path to a universal binary to notarize (optional)"
-                echo "                If not provided, notarizes binaries in build/output/"
+                echo "                If not provided, notarizes brewmeister-universal-64 in .build/universal/"
                 echo ""
                 echo "Options:"
                 echo "  --verbose     Show detailed notarytool output"
                 echo "  --help        Show this help message"
                 echo ""
                 echo "Environment Variables:"
-                echo "  DEBUG=yes              Also notarize DEBUG binaries (ignored with BINARY_PATH)"
-                echo "  MACOS_NOTARY_PROFILE   Keychain profile name (default: meshagent-notary)"
+                echo "  MACOS_NOTARY_PROFILE   Keychain profile name (default: brewmeister-notary)"
                 echo ""
                 echo "Prerequisites:"
                 echo "  1. Binaries must be signed first (./macos-sign.sh)"
@@ -272,10 +265,9 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
                 echo "  - PASSWORD: App-specific password from https://appleid.apple.com"
                 echo ""
                 echo "Examples:"
-                echo "  ./macos-notarize.sh                              # Notarize default binaries"
-                echo "  ./macos-notarize.sh /path/to/meshagent_universal # Notarize specific binary"
-                echo "  DEBUG=yes ./macos-notarize.sh                    # Notarize release + DEBUG"
-                echo "  ./macos-notarize.sh --verbose                    # Show detailed output"
+                echo "  ./macos-notarize.sh                                    # Notarize default binary"
+                echo "  ./macos-notarize.sh /path/to/brewmeister-universal-64  # Notarize specific binary"
+                echo "  ./macos-notarize.sh --verbose                          # Show detailed output"
                 echo ""
                 echo "As a sourceable script:"
                 echo "  source ./macos-notarize.sh"
@@ -330,14 +322,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 
         echo -e "${YELLOW}Target binary:${NC} $CUSTOM_BINARY"
         echo -e "${YELLOW}Mode:${NC}          Custom binary"
-
-        # Warn if DEBUG is set (it's ignored in custom mode)
-        if [ "$NOTARIZE_DEBUG" = "yes" ]; then
-            echo -e "${YELLOW}Note: DEBUG flag is ignored when notarizing a custom binary${NC}"
-        fi
     else
-        echo -e "${YELLOW}Notarize DEBUG:${NC} $NOTARIZE_DEBUG"
-        echo -e "${YELLOW}Mode:${NC}           Default (build/output/)"
+        echo -e "${YELLOW}Mode:${NC}           Default (.build/universal/)"
 
         # Check if output directory exists (only needed for default mode)
         if [ ! -d "$OUTPUT_DIR" ]; then
@@ -399,10 +385,10 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         fi
     else
         #==========================================================================
-        # DEFAULT MODE: NOTARIZE RELEASE BINARY
+        # DEFAULT MODE: NOTARIZE brewmeister BINARY
         #==========================================================================
 
-        echo -e "${BLUE}Step 1: Notarize release universal binary${NC}"
+        echo -e "${BLUE}Notarizing brewmeister universal binary${NC}"
         echo ""
 
         RELEASE_PATH="$OUTPUT_DIR/$RELEASE_BINARY"
@@ -414,32 +400,9 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
                 FAILED_COUNT=$((FAILED_COUNT + 1))
             fi
         else
-            echo -e "${RED}Error: Release binary not found: $RELEASE_PATH${NC}"
+            echo -e "${RED}Error: Binary not found: $RELEASE_PATH${NC}"
             echo "Build and sign the universal binary first"
             exit 1
-        fi
-
-        #==========================================================================
-        # DEFAULT MODE: NOTARIZE DEBUG BINARY (if DEBUG=yes)
-        #==========================================================================
-
-        if [ "$NOTARIZE_DEBUG" = "yes" ]; then
-            echo -e "${BLUE}Step 2: Notarize DEBUG universal binary${NC}"
-            echo ""
-
-            DEBUG_PATH="$DEBUG_DIR/$DEBUG_BINARY"
-
-            if [ -f "$DEBUG_PATH" ]; then
-                if macos_notarize_binary "$DEBUG_PATH" $VERBOSE_FLAG; then
-                    NOTARIZED_COUNT=$((NOTARIZED_COUNT + 1))
-                else
-                    FAILED_COUNT=$((FAILED_COUNT + 1))
-                fi
-            else
-                echo -e "${YELLOW}Warning: DEBUG binary not found: $DEBUG_PATH${NC}"
-                echo "  (This is normal if you haven't built DEBUG binaries)"
-                echo ""
-            fi
         fi
     fi
 
@@ -478,18 +441,9 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         echo "  - ${custom_dir}/${base_name}-x86-64 (x86_64, inherits notarization)"
     else
         echo "Binary locations:"
-        if [ -f "$RELEASE_PATH" ]; then
-            echo "  Release:"
-            echo "    - $RELEASE_PATH (universal, notarized)"
-            echo "    - ${RELEASE_PATH/-universal-64/-arm-64} (arm64, inherits notarization)"
-            echo "    - ${RELEASE_PATH/-universal-64/-x86-64} (x86_64, inherits notarization)"
-        fi
-        if [ "$NOTARIZE_DEBUG" = "yes" ] && [ -f "$DEBUG_PATH" ]; then
-            echo "  DEBUG:"
-            echo "    - $DEBUG_PATH (universal, notarized)"
-            echo "    - ${DEBUG_PATH/-universal-64/-arm-64} (arm64, inherits notarization)"
-            echo "    - ${DEBUG_PATH/-universal-64/-x86-64} (x86_64, inherits notarization)"
-        fi
+        echo "  - $RELEASE_PATH (universal, notarized)"
+        echo "  - ${RELEASE_PATH/-universal-64/-arm-64} (arm64, inherits notarization)"
+        echo "  - ${RELEASE_PATH/-universal-64/-x86-64} (x86_64, inherits notarization)"
     fi
 
     echo ""
@@ -499,9 +453,6 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         echo "     xcrun stapler staple $CUSTOM_BINARY"
     else
         echo "     xcrun stapler staple $RELEASE_PATH"
-        if [ "$NOTARIZE_DEBUG" = "yes" ] && [ -f "$DEBUG_PATH" ]; then
-            echo "     xcrun stapler staple $DEBUG_PATH"
-        fi
     fi
     echo "  2. Verify binaries with:"
     if [ -n "$CUSTOM_BINARY" ]; then
