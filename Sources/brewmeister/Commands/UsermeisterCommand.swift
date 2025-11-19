@@ -17,6 +17,9 @@ struct UsermeisterCommand: ParsableCommand {
     @Flag(name: .long, help: "Force reconfiguration even if already configured")
     var force: Bool = false
 
+    @Flag(name: .long, help: "Remove brewmeister configuration from user")
+    var remove: Bool = false
+
     @Flag(name: .long, help: "Only show errors")
     var quiet: Bool = false
 
@@ -41,6 +44,21 @@ struct UsermeisterCommand: ParsableCommand {
             targetUsername = sudoUser
         } else {
             throw BrewmeisterError.notConfigured(message: "Could not determine username. Run with sudo or provide username explicitly.")
+        }
+
+        // Handle removal mode
+        if remove {
+            Logger.info("Removing brewmeister configuration for user: \(targetUsername)")
+
+            // Get user's home directory
+            let homeDir = try getUserHomeDirectory(username: targetUsername)
+            let zshrcPath = "\(homeDir)/.zshrc"
+
+            try removeUserConfiguration(path: zshrcPath, username: targetUsername)
+
+            Logger.info("✓ User '\(targetUsername)' brewmeister configuration removed")
+            Logger.info("To apply changes, the user should run: source ~/.zshrc")
+            return
         }
 
         Logger.info("Configuring user: \(targetUsername)")
@@ -76,7 +94,7 @@ struct UsermeisterCommand: ParsableCommand {
         }
 
         // 5. Modify .zshrc
-        try configureZshrc(path: zshrcPath, brewPrefix: config.brewPrefix)
+        try configureZshrc(path: zshrcPath, brewPrefix: config.brewPrefix, username: targetUsername)
 
         Logger.info("✓ User '\(targetUsername)' configured successfully")
         Logger.info("")
@@ -120,7 +138,7 @@ struct UsermeisterCommand: ParsableCommand {
     }
 
     /// Configure .zshrc for brewmeister
-    private func configureZshrc(path: String, brewPrefix: String) throws {
+    private func configureZshrc(path: String, brewPrefix: String, username: String) throws {
         Logger.info("Configuring zsh environment...")
 
         // Read existing .zshrc or create empty string
@@ -161,14 +179,74 @@ struct UsermeisterCommand: ParsableCommand {
         // Write updated .zshrc
         try newContent.write(toFile: path, atomically: true, encoding: .utf8)
 
-        // Ensure proper ownership
-        let owner = path.split(separator: "/")[2] // Extract username from /Users/username
-        _ = try? ProcessExecutor.execute(
-            ["/usr/sbin/chown", String(owner), path],
+        // Restore proper ownership (file was written as root)
+        let chownResult = try ProcessExecutor.execute(
+            ["/usr/sbin/chown", username, path],
             captureOutput: true
         )
+        guard chownResult.succeeded else {
+            throw BrewmeisterError.systemError(message: "Failed to set ownership on \(path)")
+        }
 
-        Logger.debug("✓ Updated \(path)")
+        // Set proper permissions (644 = rw-r--r--)
+        let chmodResult = try ProcessExecutor.execute(
+            ["/bin/chmod", "644", path],
+            captureOutput: true
+        )
+        guard chmodResult.succeeded else {
+            throw BrewmeisterError.systemError(message: "Failed to set permissions on \(path)")
+        }
+
+        Logger.debug("✓ Updated \(path) with ownership: \(username), permissions: 644")
+    }
+
+    /// Remove brewmeister configuration from user's .zshrc
+    private func removeUserConfiguration(path: String, username: String) throws {
+        // Check if .zshrc exists
+        guard FileManager.default.fileExists(atPath: path) else {
+            Logger.warning("No .zshrc found at \(path)")
+            return
+        }
+
+        // Read existing content
+        let existingContent = try String(contentsOfFile: path, encoding: .utf8)
+
+        // Check if brewmeister section exists
+        guard existingContent.contains("# >>> brewmeister initialize >>>") else {
+            Logger.warning("No brewmeister configuration found in \(path)")
+            return
+        }
+
+        // Create backup
+        let backupPath = "\(path).brewmeister-removal-backup"
+        try? FileManager.default.copyItem(atPath: path, toPath: backupPath)
+        Logger.debug("Created backup: \(backupPath)")
+
+        // Remove brewmeister section
+        let newContent = removeBrewmeisterSection(from: existingContent)
+
+        // Write updated .zshrc
+        try newContent.write(toFile: path, atomically: true, encoding: .utf8)
+
+        // Restore proper ownership (file was written as root)
+        let chownResult = try ProcessExecutor.execute(
+            ["/usr/sbin/chown", username, path],
+            captureOutput: true
+        )
+        guard chownResult.succeeded else {
+            throw BrewmeisterError.systemError(message: "Failed to set ownership on \(path)")
+        }
+
+        // Set proper permissions (644 = rw-r--r--)
+        let chmodResult = try ProcessExecutor.execute(
+            ["/bin/chmod", "644", path],
+            captureOutput: true
+        )
+        guard chmodResult.succeeded else {
+            throw BrewmeisterError.systemError(message: "Failed to set permissions on \(path)")
+        }
+
+        Logger.debug("✓ Removed brewmeister configuration from \(path)")
     }
 
     /// Remove existing brewmeister section from content
